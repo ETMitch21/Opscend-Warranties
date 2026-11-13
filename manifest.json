@@ -1,0 +1,89 @@
+{
+  "manifestVersion": "1",
+  "key": "opscend-warranties",
+  "name": "Opscend Warranties",
+  "description": "Warranty claims, inspection evidence, decisions, and repair handoffs.",
+  "version": "1.0.0-rc.7",
+  "developer": {
+    "name": "Opscend"
+  },
+  "category": "Operations",
+  "icon": "shield-check",
+  "official": true,
+  "published": false,
+  "permissions": [
+    "repairs:read",
+    "repairs:write",
+    "customers:read",
+    "appointments:read",
+    "appointments:write",
+    "orders:payments",
+    "communications:write"
+  ],
+  "capabilities": [
+    "workflow"
+  ],
+  "runtime": {
+    "protocolVersion": "1"
+  },
+  "settings": {
+    "defaults": {
+      "reviewMode": "optional",
+      "requirePhotos": true,
+      "requireDecisionReason": true,
+      "collectBeforeScheduling": true
+    },
+    "secretKeys": [],
+    "sections": [
+      {
+        "id": "review",
+        "title": "Warranty Review",
+        "fields": [
+          {
+            "type": "select",
+            "path": "reviewMode",
+            "label": "Inspection policy",
+            "options": [
+              {
+                "value": "optional",
+                "label": "Staff decides"
+              },
+              {
+                "value": "required",
+                "label": "Inspection required"
+              },
+              {
+                "value": "remote",
+                "label": "Remote first"
+              }
+            ]
+          },
+          {
+            "type": "toggle",
+            "path": "requirePhotos",
+            "label": "Require evidence photos"
+          },
+          {
+            "type": "toggle",
+            "path": "requireDecisionReason",
+            "label": "Require decision reasons"
+          },
+          {
+            "type": "toggle",
+            "path": "collectBeforeScheduling",
+            "label": "Collect payment before scheduling"
+          }
+        ]
+      }
+    ]
+  },
+  "extensions": [
+    {
+      "point": "admin.navigation",
+      "label": "Warranties",
+      "icon": "shield-check"
+    }
+  ],
+  "actions": {},
+  "events": []
+}
