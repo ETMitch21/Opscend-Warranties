@@ -155,21 +155,34 @@ app.post('/opscend/setup-status',async(req:any)=>{
 });
 app.get('/health',async()=>({ok:true}));
 app.get('/claim/:shopId',async(req:any,reply)=>{z.string().min(1).max(200).parse(req.params.shopId);return reply.type('text/html; charset=utf-8').send(readFileSync(resolve(assetsRoot,'claim.html'),'utf8'));});
-// The parent origin is configured by the app owner; do not trust a caller-supplied origin.
-app.get('/runtime-config.js', async (_req,reply) => {
-  const parentOrigin = new URL(required('APP_ORIGIN')).origin;
+// Allow only the configured Opscend host and its official shop subdomains.
+// The parent's origin is a *hint*, never a trusted authentication credential.
+function trustedParentOrigin(value: unknown): string {
+  const fallback = new URL(required('APP_ORIGIN')).origin;
+  if (value === undefined || value === null || value === '') return fallback;
+  if (typeof value !== 'string' || value.length > 300) fail(400, 'Invalid parent origin');
+  let url: URL;
+  try { url = new URL(value); } catch { fail(400, 'Invalid parent origin'); }
+  const origin = url!.origin;
+  if (origin !== value || url!.username || url!.password || url!.pathname !== '/' || url!.search || url!.hash) fail(400, 'Invalid parent origin');
+  if (origin === fallback) return origin;
+  const host = url!.hostname.toLowerCase();
+  if (url!.protocol === 'https:' && !url!.port && host.endsWith('.app.opscend.app') && host !== '.app.opscend.app') return origin;
+  fail(403, 'Untrusted parent origin');
+}
+app.get('/runtime-config.js', async (req:any,reply) => {
+  const parentOrigin = trustedParentOrigin(req.query?.parentOrigin);
   return reply.header('Cache-Control','no-store').type('application/javascript; charset=utf-8')
     .send(`window.OPSCEND_PARENT_ORIGIN=${JSON.stringify(parentOrigin)};`);
 });
-app.get('/workspace', async (_req, reply) =>
-  reply
-    .header(
-      'Content-Security-Policy',
-      "frame-ancestors 'self' https://app.opscend.app https://*.app.opscend.app"
-    )
-    .type('text/html; charset=utf-8')
-    .send(readFileSync(resolve(assetsRoot, 'workspace.html'), 'utf8'))
-);
+app.get('/workspace',async(req:any,reply)=>{
+  const parentOrigin = trustedParentOrigin(req.query?.parentOrigin);
+  const html = readFileSync(resolve(assetsRoot,'workspace.html'),'utf8')
+    .replace('src="/runtime-config.js"', `src="/runtime-config.js?parentOrigin=${encodeURIComponent(parentOrigin)}"`);
+  return reply.header('Cache-Control','no-store')
+    .header('Content-Security-Policy', `frame-ancestors 'self' ${parentOrigin}`)
+    .type('text/html; charset=utf-8').send(html);
+});
 app.get('/ui.css',async(_req,reply)=>reply.type('text/css; charset=utf-8').send(readFileSync(resolve(assetsRoot,'ui.css'),'utf8')));
 app.get('/claim.js',async(_req,reply)=>reply.type('application/javascript; charset=utf-8').send(readFileSync(resolve(assetsRoot,'claim.js'),'utf8')));
 app.get('/workspace.js',async(_req,reply)=>reply.type('application/javascript; charset=utf-8').send(readFileSync(resolve(assetsRoot,'workspace.js'),'utf8')));

@@ -10,7 +10,7 @@
   "category": "Operations",
   "icon": "shield-check",
   "official": true,
-  "published": false,
+  "published": true,
   "permissions": [
     "repairs:read",
     "repairs:write",
