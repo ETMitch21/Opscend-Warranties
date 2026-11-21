@@ -162,8 +162,55 @@ app.get('/public/shops/:shopId/branding', async (req:any, reply) => {
   return reply.header('Cache-Control', 'public, max-age=120').send({ shop: result.shop });
 });
 
+// Shop-specific customer links. A signed staff launch assertion determines the shop;
+// never trust a shop identifier supplied by the embedded browser.
+app.get('/staff/customer-request-link', async (req:any, reply) => {
+  const user = staffAuth(req);
+  await activeShop(user.shopId);
+  const base = new URL(required('PUBLIC_BASE_URL'));
+  if (base.protocol !== 'https:' && !(base.protocol === 'http:' && ['localhost','127.0.0.1'].includes(base.hostname))) {
+    fail(503, 'The customer warranty URL must use HTTPS');
+  }
+  // The runtime branding API is authenticated and returns the current shop's slug.
+  // Keep the legacy ID link as a safe fallback during a staggered deployment.
+  const info = await coreCall(user.shopId, 'branding');
+  const slug = String(info?.shop?.slug ?? '');
+  const publicPath = /^[a-z0-9][a-z0-9-]{0,99}$/.test(slug)
+    ? `/request/${encodeURIComponent(slug)}`
+    : `/claim/${encodeURIComponent(user.shopId)}`;
+  base.pathname = `${base.pathname.replace(/\/$/, '')}${publicPath}`;
+  base.search = '';
+  base.hash = '';
+  return reply.header('Cache-Control', 'no-store').send({ data: { url: base.toString() } });
+});
+
+// Look up the shop through the authenticated plugin-to-Core connection before
+// letting an unauthenticated browser submit a claim under a friendly URL.
+app.get('/public/shop-slugs/:slug', async (req:any, reply) => {
+  const { slug } = z.object({ slug: z.string().regex(/^[a-z0-9][a-z0-9-]{0,99}$/) }).parse(req.params);
+  throttle(`shop-slug:${req.ip}`, 60, 60_000);
+  if (!CORE) fail(503, 'Opscend API is not configured');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(`${CORE}/v1/app-runtime/shops/resolve-slug/${encodeURIComponent(slug)}`, {
+      headers: { Authorization: `Bearer ${secret}`, 'x-opscend-app-key': APP_KEY, Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    if (response.status === 404 || response.status === 403) fail(404, 'Shop not found');
+    if (!response.ok) fail(502, 'Cannot load this shop right now');
+    const data: any = await response.json();
+    await activeShop(String(data.shopId));
+    return reply.header('Cache-Control', 'public, max-age=120').send({ shopId: data.shopId });
+  } catch (err) {
+    if (err instanceof Error && 'statusCode' in err) throw err;
+    fail(502, 'Shop lookup is temporarily unavailable');
+  } finally { clearTimeout(timeout); }
+});
+
 app.get('/health',async()=>({ok:true}));
 app.get('/claim/:shopId',async(req:any,reply)=>{z.string().min(1).max(200).parse(req.params.shopId);return reply.type('text/html; charset=utf-8').send(readFileSync(resolve(assetsRoot,'claim.html'),'utf8'));});
+app.get('/request/:slug', async (req:any, reply) => { z.string().regex(/^[a-z0-9][a-z0-9-]{0,99}$/).parse(req.params.slug); return reply.type('text/html; charset=utf-8').send(readFileSync(resolve(assetsRoot,'claim.html'),'utf8')); });
 // Allow only the configured Opscend host and its official shop subdomains.
 // The parent's origin is a *hint*, never a trusted authentication credential.
 function trustedParentOrigin(value: unknown): string {
