@@ -56,3 +56,13 @@ body.workspace-page{background:#f8f9fb;color:#262a32;min-height:100vh}
 
 /* Customer access — understated, native-workspace layout */
 .customer-access-hint{display:flex;justify-content:space-between;align-items:center;gap:18px;border:1px solid #e4e6ea;background:#fff;border-radius:12px;padding:14px 18px;margin:12px 0 20px}.customer-access-hint>div{display:flex;flex-direction:column;gap:4px}.customer-access-hint strong{font-size:13px;color:#272b31}.customer-access-hint span{font-size:12px;color:#6b7480}.customer-access-hint button{white-space:nowrap}.workspace-actions{display:flex;align-items:center;gap:10px}@media(max-width:700px){.customer-access-hint{flex-direction:column;align-items:stretch}.customer-access-hint button{align-self:flex-start}}
+
+/* Copyable public warranty link: supports sandboxed iframe clipboard restrictions. */
+.workspace-page .customer-access-hint{align-items:center}
+.workspace-page .customer-access-hint>div:first-child{min-width:190px;flex:1}
+.workspace-page .customer-access-control{display:flex;align-items:center;flex:1.5;gap:10px;min-width:0}
+.workspace-page .customer-access-control input{flex:1;min-width:0;width:100%;font-size:12px;line-height:1.4;color:#3c4654;border:1px solid #d9dee6;border-radius:8px;background:#f9fafb;padding:9px 11px;cursor:text;text-overflow:ellipsis}
+.workspace-page .customer-access-control input:focus{outline:2px solid #fb923c;outline-offset:1px}
+.workspace-page .customer-access-control button{flex-shrink:0}
+.workspace-page .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:850px){.workspace-page .customer-access-hint{flex-wrap:wrap}.workspace-page .customer-access-control{flex-basis:100%;width:100%}}
