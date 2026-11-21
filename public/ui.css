@@ -42,3 +42,14 @@ body.workspace-page{background:#f8f9fb;color:#262a32;min-height:100vh}
 .workspace-page .installed-app-tooltip{position:absolute;z-index:30;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:max-content;max-width:230px;background:#29313d;color:#fff;font-size:12px;font-weight:500;line-height:1.4;padding:7px 10px;border-radius:7px;box-shadow:0 4px 18px #10182820;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease}
 .workspace-page .installed-app-info:hover .installed-app-tooltip,.workspace-page .installed-app-info:focus-visible .installed-app-tooltip{opacity:1;visibility:visible}
 @media(max-width:700px){.workspace-page .toolbar:first-child{flex-direction:row;align-items:center}.workspace-page .workspace-actions{gap:8px}}
+
+/* Keep dropdown chevrons comfortably inset from the right edge. */
+.workspace-page select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 42px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
+}
