@@ -66,3 +66,33 @@ body.workspace-page{background:#f8f9fb;color:#262a32;min-height:100vh}
 .workspace-page .customer-access-control button{flex-shrink:0}
 .workspace-page .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:850px){.workspace-page .customer-access-hint{flex-wrap:wrap}.workspace-page .customer-access-control{flex-basis:100%;width:100%}}
+
+/* Native single-line warranty link with an inset copy icon. */
+.workspace-page .customer-access-control{display:block;flex:1.5;min-width:0;width:100%}
+.workspace-page .customer-link-field{display:flex;align-items:center;min-width:0;width:100%;height:40px;border:1px solid #d9dee6;border-radius:9px;background:#fff;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.workspace-page .customer-link-field:focus-within{border-color:#f58549;box-shadow:0 0 0 2px #f5854924}
+.workspace-page .customer-link-field input{flex:1;min-width:0;width:100%;height:100%;border:0;border-radius:0;outline:none;box-shadow:none;background:transparent;padding:9px 8px 9px 12px;text-overflow:ellipsis;color:#4b5563}
+.workspace-page .customer-link-field input:focus{outline:none;border:0;box-shadow:none}
+.workspace-page .customer-link-field .customer-link-copy{flex:0 0 38px;width:38px;height:36px;display:flex;align-items:center;justify-content:center;padding:0;margin:0 2px 0 0;background:transparent;color:#667085;border-radius:7px;border:0;cursor:pointer}
+.workspace-page .customer-link-field .customer-link-copy:hover:not(:disabled){background:#f3f4f6;color:#242a33;filter:none}
+.workspace-page .customer-link-field .customer-link-copy:focus-visible{outline:2px solid #f58549;outline-offset:-3px}
+.workspace-page .customer-link-field .customer-link-copy.copied{color:#16803d}
+.workspace-page .customer-link-field .customer-link-copy:disabled{opacity:.45;cursor:default}
+.workspace-page #toast{pointer-events:none}
+
+/* Customer-facing brandable warranty portal; scoped away from embedded staff UI. */
+.public-claim{--shop-accent:#333b48;--shop-accent-text:#fff;background:#f7f8fa;color:#242a32}
+.public-claim .shop-header{padding:16px max(24px,calc((100vw - 1080px)/2));background:#fff;border-bottom:1px solid #e6e8ec;display:flex;justify-content:space-between;gap:20px;align-items:center}
+.public-claim .shop-identity{display:flex;align-items:center;gap:12px;min-width:0}
+.public-claim .shop-name{font-weight:750;font-size:19px;letter-spacing:-.4px;overflow-wrap:anywhere}
+.public-claim .shop-logo{max-width:160px;max-height:54px;width:auto;height:auto;object-fit:contain}
+.public-claim .shop-header-help{font-size:12px;color:#6b7480;white-space:nowrap}
+.public-claim main.narrow{max-width:720px;padding-top:34px}
+.public-claim h1{font-size:29px;letter-spacing:-.7px}
+.public-claim .card{border-color:#e3e6eb;box-shadow:0 2px 9px rgba(20,30,45,.035)}
+.public-claim input:focus,.public-claim textarea:focus,.public-claim select:focus{border-color:var(--shop-accent);outline:2px solid color-mix(in srgb,var(--shop-accent) 20%,transparent)}
+.public-claim button:not(.secondary):not(.danger){background:var(--shop-accent);color:var(--shop-accent-text)}
+.public-claim .shop-contact{margin:12px 0 20px;line-height:1.6}
+.public-claim .shop-contact a{color:var(--shop-accent);text-decoration:underline;text-underline-offset:2px}
+.public-claim .claim-footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 0 26px;font-size:12px;color:#687381}
+@media(max-width:700px){.public-claim .shop-header{padding:14px 18px}.public-claim .shop-name{font-size:16px}.public-claim .shop-logo{max-width:120px;max-height:42px}.public-claim main.narrow{padding-top:24px}}

@@ -153,22 +153,13 @@ app.post('/opscend/setup-status',async(req:any)=>{
   await pool.query(`INSERT INTO warranty_shops (shop_id,settings,installed) VALUES ($1,$2,TRUE) ON CONFLICT (shop_id) DO UPDATE SET settings=$2,updated_at=NOW()`,[body.installation.shopId,JSON.stringify(body.installation.settings??{})]);
   return {ready:Boolean(bucket)};
 });
-// A shop-specific public claim URL is derived from the verified Opscend
-// launch assertion. Staff never need to look up or type their internal shop ID.
-app.get('/staff/customer-request-link', async (req:any, reply) => {
-  const user = staffAuth(req);
-  await activeShop(user.shopId);
-  const base = new URL(required('PUBLIC_BASE_URL'));
-  if (base.protocol !== 'https:' && !['localhost','127.0.0.1'].includes(base.hostname)) {
-    fail(503, 'The customer warranty URL must use HTTPS');
-  }
-  // Preserve a configured deployment prefix, if any.
-  const path = `${base.pathname.replace(/\/$/, '')}/claim/${encodeURIComponent(user.shopId)}`;
-  base.pathname = path;
-  base.search = '';
-  base.hash = '';
-  reply.header('Cache-Control', 'no-store');
-  return {data:{url:base.toString()}};
+// Customer-facing branding is fetched by the server using the installed plugin's
+// scoped runtime credential. No privileged credentials are exposed to the browser.
+app.get('/public/shops/:shopId/branding', async (req:any, reply) => {
+  const { shopId } = z.object({ shopId: z.string().min(1).max(120) }).parse(req.params);
+  await activeShop(shopId);
+  const result = await coreCall(shopId, 'branding');
+  return reply.header('Cache-Control', 'public, max-age=120').send({ shop: result.shop });
 });
 
 app.get('/health',async()=>({ok:true}));
