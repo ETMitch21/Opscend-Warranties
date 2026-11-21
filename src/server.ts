@@ -153,6 +153,24 @@ app.post('/opscend/setup-status',async(req:any)=>{
   await pool.query(`INSERT INTO warranty_shops (shop_id,settings,installed) VALUES ($1,$2,TRUE) ON CONFLICT (shop_id) DO UPDATE SET settings=$2,updated_at=NOW()`,[body.installation.shopId,JSON.stringify(body.installation.settings??{})]);
   return {ready:Boolean(bucket)};
 });
+// A shop-specific public claim URL is derived from the verified Opscend
+// launch assertion. Staff never need to look up or type their internal shop ID.
+app.get('/staff/customer-request-link', async (req:any, reply) => {
+  const user = staffAuth(req);
+  await activeShop(user.shopId);
+  const base = new URL(required('PUBLIC_BASE_URL'));
+  if (base.protocol !== 'https:' && !['localhost','127.0.0.1'].includes(base.hostname)) {
+    fail(503, 'The customer warranty URL must use HTTPS');
+  }
+  // Preserve a configured deployment prefix, if any.
+  const path = `${base.pathname.replace(/\/$/, '')}/claim/${encodeURIComponent(user.shopId)}`;
+  base.pathname = path;
+  base.search = '';
+  base.hash = '';
+  reply.header('Cache-Control', 'no-store');
+  return {data:{url:base.toString()}};
+});
+
 app.get('/health',async()=>({ok:true}));
 app.get('/claim/:shopId',async(req:any,reply)=>{z.string().min(1).max(200).parse(req.params.shopId);return reply.type('text/html; charset=utf-8').send(readFileSync(resolve(assetsRoot,'claim.html'),'utf8'));});
 // Allow only the configured Opscend host and its official shop subdomains.
