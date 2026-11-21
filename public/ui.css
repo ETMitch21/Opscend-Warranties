@@ -34,3 +34,11 @@ body.workspace-page{background:#f8f9fb;color:#262a32;min-height:100vh}
 .workspace-page #toast{position:fixed;bottom:20px;right:24px;z-index:20;max-width:400px}
 .workspace-page #toast:empty{display:none}
 @media(max-width:800px){.workspace-page main{padding:18px 16px 36px}.workspace-page .grid.three{grid-template-columns:1fr}.workspace-page .list-toolbar{flex-direction:column;align-items:stretch}.workspace-page #filter{width:100%}}
+
+/* Subtle installed-app disclosure beside the native workspace refresh control. */
+.workspace-page .workspace-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.workspace-page .installed-app-info{position:relative;display:inline-flex;align-items:center;justify-content:center;width:20px;height:24px;color:#9aa2ae;cursor:help;outline-offset:4px;border-radius:50%}
+.workspace-page .installed-app-info:hover,.workspace-page .installed-app-info:focus-visible{color:#596474}
+.workspace-page .installed-app-tooltip{position:absolute;z-index:30;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);width:max-content;max-width:230px;background:#29313d;color:#fff;font-size:12px;font-weight:500;line-height:1.4;padding:7px 10px;border-radius:7px;box-shadow:0 4px 18px #10182820;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease}
+.workspace-page .installed-app-info:hover .installed-app-tooltip,.workspace-page .installed-app-info:focus-visible .installed-app-tooltip{opacity:1;visibility:visible}
+@media(max-width:700px){.workspace-page .toolbar:first-child{flex-direction:row;align-items:center}.workspace-page .workspace-actions{gap:8px}}
