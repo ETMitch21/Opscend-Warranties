@@ -106,12 +106,12 @@ async function dispatchNotifications(max=20) {
       const status=String(c.status).replaceAll('_',' ');
       const sms=row.kind.startsWith('sms:');
       const kind=sms?row.kind.slice(4):row.kind;
-      const body=`Hello ${c.customer_name},\n\nYour warranty request (${c.id}) has an update: ${kind.replaceAll('_',' ')}.\nCurrent status: ${status}.\n${c.decision_reason?'Decision: '+c.decision_reason+'\n':''}${c.customer_charge_cents&&kind==='partial'?'Amount to pay: $'+(c.customer_charge_cents/100).toFixed(2)+'\n':''}\nTo view your claim or complete an approved payment, visit ${required('PUBLIC_BASE_URL').replace(/\/$/,'')}/claim-status/${c.id} and enter your saved claim access code.\n\nPlease contact the shop if you need assistance. Do not send device passwords or sensitive data by email.`;
+      const body=`Hello ${c.customer_name},\n\nYour warranty request #${c.reference_number} has an update: ${kind.replaceAll('_',' ')}.\nCurrent status: ${status}.\n${c.decision_reason?'Decision: '+c.decision_reason+'\n':''}${c.customer_charge_cents&&kind==='partial'?'Amount to pay: $'+(c.customer_charge_cents/100).toFixed(2)+'\n':''}\nTo view your claim or complete an approved payment, visit ${required('PUBLIC_BASE_URL').replace(/\/$/,'')}/claim-status/${c.id} and enter your saved claim access code.\n\nPlease contact the shop if you need assistance. Do not send device passwords or sensitive data by email.`;
       if(sms){
         const digits=String(c.customer_phone||'').replace(/\D/g,'');
         const to=digits.length===10?'+1'+digits:digits.length===11&&digits.startsWith('1')?'+'+digits:null;
         if(!c.sms_opt_in||!to) throw Error('SMS consent or valid US phone number missing');
-        const message=`Warranty claim ${c.id}: ${kind.replaceAll('_',' ')}. Status: ${status}. Check your email for details or contact the shop.`;
+        const message=`Warranty request #${c.reference_number}: ${kind.replaceAll('_',' ')}. Status: ${status}. Check your email for details or contact the shop.`;
         await coreCall(c.shop_id,'notifications/sms','POST',{to,body:message,notificationId:row.id},row.id);
       } else await coreCall(c.shop_id,'notifications/email','POST',{to:c.customer_email,subject:titles[kind]||'Warranty request update',body,notificationId:row.id},row.id);
       await pool.query('UPDATE warranty_notifications SET delivered_at=NOW(),locked_until=NULL,last_error=NULL WHERE id=$1',[row.id]);
@@ -258,17 +258,19 @@ app.post('/public/shops/:shopId/claims',async(req:any,reply)=>{
   }).parse(req.body);
   const id=crypto.randomUUID(), token=crypto.randomBytes(32).toString('base64url'), otp=String(crypto.randomInt(100000,1000000));
   const inspectionRequired=settings.reviewMode==='required';
+  let referenceNumber = '';
   const client=await pool.connect(); try {
     await client.query('BEGIN');
-    await client.query(`INSERT INTO warranty_claims (id,shop_id,original_repair_id,customer_id,customer_name,customer_email,customer_phone,device_description,issue,inspection_required,public_token_hash,status,sms_opt_in) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,[id,shopId,body.originalRepairId??null,body.customerId??null,body.customerName,body.customerEmail,body.customerPhone??null,body.deviceDescription,body.issue,inspectionRequired,hash(token),inspectionRequired?'needs_inspection':'submitted',body.smsOptIn]);
+    const inserted = await client.query(`INSERT INTO warranty_claims (id,shop_id,original_repair_id,customer_id,customer_name,customer_email,customer_phone,device_description,issue,inspection_required,public_token_hash,status,sms_opt_in) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING reference_number`,[id,shopId,body.originalRepairId??null,body.customerId??null,body.customerName,body.customerEmail,body.customerPhone??null,body.deviceDescription,body.issue,inspectionRequired,hash(token),inspectionRequired?'needs_inspection':'submitted',body.smsOptIn]);
+    referenceNumber = String(inserted.rows[0].reference_number);
     await client.query("INSERT INTO warranty_access_challenges (claim_id,otp_hash,expires_at) VALUES ($1,$2,NOW()+INTERVAL '15 minutes')",[id,hash(id+':'+otp+':'+secret)]);
     await event(client,id,'customer',null,'claim.submitted'); await enqueue(client,id,'submitted'); await client.query('COMMIT');
   } catch(err) { await client.query('ROLLBACK');throw err; } finally {client.release();}
   // No claim access until possession of the email address is proved.
   // Send the OTP using the shop's existing Opscend email provider.
-  try {await coreCall(shopId,'notifications/email','POST',{to:body.customerEmail,subject:'Verify your warranty request',body:`Your Opscend warranty request ${id} verification code is ${otp}. It expires in 15 minutes. If you did not request this, ignore this message.`,notificationId:id},`claim-verify-${id}`);}
+  try {await coreCall(shopId,'notifications/email','POST',{to:body.customerEmail,subject:'Verify your warranty request',body:`Your warranty request #${referenceNumber} verification code is ${otp}. It expires in 15 minutes. If you did not request this, ignore this message.`,notificationId:id},`claim-verify-${id}`);}
   catch(err){await pool.query('DELETE FROM warranty_events WHERE claim_id=$1',[id]);await pool.query('DELETE FROM warranty_notifications WHERE claim_id=$1',[id]);await pool.query('DELETE FROM warranty_access_challenges WHERE claim_id=$1',[id]);await pool.query('DELETE FROM warranty_claims WHERE id=$1',[id]);throw err;}
-  return reply.code(201).send({id,status:'email_verification_required'});
+  return reply.code(201).send({id,referenceNumber,status:'email_verification_required'});
 });
 app.post('/public/claims/:id/verify-email',async(req:any)=>{
   throttle(`verify:${req.ip}`,8,3600000);
@@ -295,7 +297,7 @@ app.post('/public/claims/:id/recover',async(req:any)=>{
   throttle(`recover:${req.ip}`,4,3600000);
   const {id}=params.parse(req.params);
   const {email}=z.object({email:z.string().email().max(254)}).parse(req.body);
-  const claim=await pool.query(`SELECT c.shop_id,c.customer_email FROM warranty_claims c JOIN warranty_shops s ON s.shop_id=c.shop_id WHERE c.id=$1 AND s.installed=TRUE`,[id]);
+  const claim=await pool.query(`SELECT c.shop_id,c.customer_email,c.reference_number FROM warranty_claims c JOIN warranty_shops s ON s.shop_id=c.shop_id WHERE c.id=$1 AND s.installed=TRUE`,[id]);
   if(!claim.rowCount||!sameContact(email,claim.rows[0].customer_email)) return {ok:true};
   const code=String(crypto.randomInt(100000,1000000));
   const client=await pool.connect();try{await client.query('BEGIN');
@@ -304,7 +306,7 @@ app.post('/public/claims/:id/recover',async(req:any)=>{
       ON CONFLICT(claim_id) DO UPDATE SET otp_hash=$2,expires_at=NOW()+INTERVAL '15 minutes',attempts=0,verified_at=NULL`,[id,hash(id+':'+code+':'+secret)]);
     await event(client,id,'customer',null,'customer.access_recovery_requested');await client.query('COMMIT');
   }catch(err){await client.query('ROLLBACK');throw err;}finally{client.release();}
-  await coreCall(claim.rows[0].shop_id,'notifications/email','POST',{to:claim.rows[0].customer_email,subject:'Your warranty access code',body:`Your verification code for warranty claim ${id} is ${code}. It expires in 15 minutes. If you did not request this, ignore this email.`,notificationId:crypto.randomUUID()});
+  await coreCall(claim.rows[0].shop_id,'notifications/email','POST',{to:claim.rows[0].customer_email,subject:'Your warranty access code',body:`Your verification code for warranty request #${claim.rows[0].reference_number} is ${code}. It expires in 15 minutes. If you did not request this, ignore this email.`,notificationId:crypto.randomUUID()});
   return {ok:true};
 });
 async function publicClaim(req:any) {
@@ -316,7 +318,7 @@ async function publicClaim(req:any) {
 }
 app.get('/public/claims/:id',async(req:any)=>{
   const c=await publicClaim(req);
-  return {id:c.id,status:c.status,deviceDescription:c.device_description,issue:c.issue,customerName:c.customer_name,decision:c.decision,decisionReason:c.decision_reason,customerChargeCents:c.customer_charge_cents,submittedAt:c.submitted_at,paymentVerified:!!c.payment_verified_at,inspectionAppointmentId:c.inspection_appointment_id,originalRepairVerified:!!c.original_repair_verified_at,canPay:c.status==='awaiting_payment'};
+  return {id:c.id,referenceNumber:String(c.reference_number),status:c.status,deviceDescription:c.device_description,issue:c.issue,customerName:c.customer_name,decision:c.decision,decisionReason:c.decision_reason,customerChargeCents:c.customer_charge_cents,submittedAt:c.submitted_at,paymentVerified:!!c.payment_verified_at,inspectionAppointmentId:c.inspection_appointment_id,originalRepairVerified:!!c.original_repair_verified_at,canPay:c.status==='awaiting_payment'};
 });
 
 // Upload flow requires S3 storage, uses short-lived, per-claim object keys.
@@ -347,12 +349,12 @@ app.post('/public/claims/:id/evidence/:evidenceId/confirm',async(req:any)=>{
 app.get('/staff/claims',async(req:any)=>{
   const user=staffAuth(req);await activeShop(user.shopId);
   const filter=z.object({status:z.string().max(40).optional()}).parse(req.query);
-  const rows=await pool.query(`SELECT id,customer_name,device_description,status,customer_charge_cents,submitted_at FROM warranty_claims WHERE shop_id=$1 AND ($2::text IS NULL OR status=$2) ORDER BY submitted_at DESC LIMIT 200`,[user.shopId,filter.status??null]);
+  const rows=await pool.query(`SELECT id,reference_number,customer_name,device_description,status,customer_charge_cents,submitted_at FROM warranty_claims WHERE shop_id=$1 AND ($2::text IS NULL OR status=$2) ORDER BY submitted_at DESC LIMIT 200`,[user.shopId,filter.status??null]);
   return {data:rows.rows};
 });
 app.get('/staff/claims/:id',async(req:any)=>{
   const user=staffAuth(req);await activeShop(user.shopId);const {id}=params.parse(req.params);
-  const result=await pool.query('SELECT id,original_repair_id,customer_id,customer_name,customer_email,customer_phone,device_description,issue,status,inspection_required,inspection_completed_at,original_repair_verified_at,original_repair_verified_by,original_repair_verification_note,decision,decision_reason,customer_charge_cents,replacement_repair_id,inspection_repair_id,inspection_appointment_id,repair_appointment_id,payment_reference,payment_verified_at,submitted_at FROM warranty_claims WHERE id=$1 AND shop_id=$2',[id,user.shopId]);
+  const result=await pool.query('SELECT id,reference_number,original_repair_id,customer_id,customer_name,customer_email,customer_phone,device_description,issue,status,inspection_required,inspection_completed_at,original_repair_verified_at,original_repair_verified_by,original_repair_verification_note,decision,decision_reason,customer_charge_cents,replacement_repair_id,inspection_repair_id,inspection_appointment_id,repair_appointment_id,payment_reference,payment_verified_at,submitted_at FROM warranty_claims WHERE id=$1 AND shop_id=$2',[id,user.shopId]);
   if(!result.rowCount) fail(404,'Claim not found');
   const events=await pool.query('SELECT actor_type,actor_id,event,details,created_at FROM warranty_events WHERE claim_id=$1 ORDER BY created_at',[id]);
   const evidence=await pool.query('SELECT id,mime_type,uploaded_by,created_at,confirmed_at FROM warranty_evidence WHERE claim_id=$1',[id]);

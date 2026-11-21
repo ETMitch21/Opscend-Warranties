@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>Warranty request</title><link rel="stylesheet" href="/ui.css?v=wizard1"></head>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>Warranty request</title><link rel="stylesheet" href="/ui.css?v=shortref1"></head>
 <body class="public-claim claim-wizard">
 <header class="shop-header"><div class="shop-identity"><img id="shopLogo" class="shop-logo hidden" alt=""><span id="shopName" class="shop-name">Warranty service</span></div><span class="shop-header-help">Warranty request</span></header>
 <main class="wizard-shell">
@@ -14,6 +14,23 @@
 <section class="wizard-step" data-step="4" aria-labelledby="step4title" hidden><div class="wizard-number">05 / 05</div><h2 id="step4title">Everything look right?</h2><p class="wizard-subtitle">Review your details before sending your request to the repair shop.</p><dl class="wizard-review"><div><dt>Original repair</dt><dd id="reviewRepair"></dd></div><div><dt>Name</dt><dd id="reviewName"></dd></div><div><dt>Email</dt><dd id="reviewEmail"></dd></div><div><dt>Phone</dt><dd id="reviewPhone"></dd></div><div><dt>Device</dt><dd id="reviewDevice"></dd></div><div><dt>Issue</dt><dd id="reviewIssue"></dd></div></dl></section>
 <div class="wizard-actions"><button type="button" id="wizardBack" class="secondary wizard-back" hidden>Back</button><button type="button" id="wizardNext" class="wizard-next">Continue <span aria-hidden="true">→</span></button><button id="submit" type="submit" class="hidden">Submit warranty request <span aria-hidden="true">→</span></button><span class="wizard-enter-hint">Press Enter ↵</span></div>
 </form>
-<section id="submitted" class="card hidden"><h2>Request received</h2><p>Your reference is <strong id="reference"></strong>. Check your email for a verification code to continue.</p><div class="field" id="verifyBox"><label for="emailCode">Email verification code</label><input id="emailCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code"><button id="verifyEmail" type="button">Verify email</button></div><div id="accessTools" class="hidden"><div class="field"><label>Claim access code</label><input readonly id="accessCode"></div><div class="actions"><button type="button" id="copyCode" class="secondary">Copy access code</button></div></div><div id="uploadCard" class="hidden"><h3>Add photos</h3><p class="muted">Up to 4 photos, 10 MB each.</p><input id="photos" type="file" multiple accept="image/jpeg,image/png,image/webp,image/heic"><div class="actions" style="margin-top:12px"><button id="upload" type="button">Upload photos</button></div><p id="uploadState" class="muted" aria-live="polite"></p></div><hr style="border:0;border-top:1px solid #eee;margin:20px 0"><button id="status" type="button" class="secondary" disabled>Refresh claim status</button><div id="claimStatus"></div></section>
+<section id="submitted" class="claim-completion hidden" aria-labelledby="completionTitle">
+  <div class="completion-icon" aria-hidden="true">✓</div>
+  <div class="completion-kicker">REQUEST RECEIVED</div>
+  <h2 id="completionTitle">We have your request.</h2>
+  <p class="completion-intro">Your repair shop will review your warranty request. Keep this reference handy if you need to contact them.</p>
+  <div class="reference-card"><span class="reference-label">Your warranty reference</span><strong id="reference" class="reference-number" aria-live="polite"></strong><span class="reference-hint">Six digits. This is not your private access code.</span></div>
+  <div id="verifyBox" class="completion-section">
+    <div class="completion-step"><span class="completion-step-number">1</span><div><h3>Verify your email</h3><p>Enter the six-digit code we emailed you to access your request and upload photos.</p></div></div>
+    <div class="field verify-email-field"><label for="emailCode">Email verification code</label><input id="emailCode" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" placeholder="000000"></div>
+    <button id="verifyEmail" type="button" class="completion-primary">Verify email <span aria-hidden="true">→</span></button>
+  </div>
+  <div id="accessTools" class="completion-section hidden">
+    <div class="completion-step"><span class="completion-step-number completion-step-done">✓</span><div><h3>Email verified</h3><p>Save your private access code to check the claim later. Unlike your six-digit reference, this code grants access to claim details.</p></div></div>
+    <div class="field"><label for="accessCode">Private claim access code</label><input readonly id="accessCode" autocomplete="off"></div><div class="actions"><button type="button" id="copyCode" class="secondary">Copy private access code</button></div>
+  </div>
+  <div id="uploadCard" class="completion-section hidden"><div class="completion-step"><span class="completion-step-number">2</span><div><h3>Add photos</h3><p>Help the shop understand the issue. You can upload up to four photos (10 MB each).</p></div></div><input id="photos" type="file" multiple accept="image/jpeg,image/png,image/webp,image/heic"><div class="actions" style="margin-top:14px"><button id="upload" type="button">Upload photos</button></div><p id="uploadState" class="muted" aria-live="polite"></p></div>
+  <div class="completion-status"><button id="status" type="button" class="secondary" disabled>Refresh claim status</button><div id="claimStatus" aria-live="polite"></div></div>
+</section>
 <footer class="claim-footer"><span class="wizard-footer-brand">A service from <strong id="footerShopName">your repair shop</strong></span><span id="shopContact" class="shop-contact muted" hidden></span></footer>
-</main><script src="/claim.js?v=wizard1" defer></script></body></html>
+</main><script src="/claim.js?v=shortref1" defer></script></body></html>
